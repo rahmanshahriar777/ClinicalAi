@@ -32,7 +32,7 @@ export default function Login() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[s.screen, { justifyContent: 'center' }]}>
-        <Text style={[s.h1, { textAlign: 'center' }]}>Clinical AI</Text>
+        <Text style={[s.h1, { textAlign: 'center' }]}>ClinicBridge</Text>
         <Card title={mfaToken ? 'Enter your code' : 'Sign in'}>
           {error ? <Banner tone="danger" text={error} /> : null}
           {mfaToken ? (

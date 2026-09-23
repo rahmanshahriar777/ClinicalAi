@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const has = await LocalAuthentication.hasHardwareAsync();
     const enrolled = await LocalAuthentication.isEnrolledAsync();
     if (!has || !enrolled) return setLocked(false);
-    const r = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock Clinical AI' });
+    const r = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock ClinicBridge' });
     if (r.success) setLocked(false);
   }, []);
 

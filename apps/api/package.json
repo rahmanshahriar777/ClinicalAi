@@ -2,7 +2,7 @@
   "name": "@app/api",
   "version": "1.0.0",
   "private": true,
-  "description": "NestJS backend API for the Clinical AI Platform",
+  "description": "NestJS backend API for ClinicBridge",
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch",

@@ -1,6 +1,6 @@
-# Clinical AI Platform
+# ClinicBridge
 
-**AI-Powered Clinical Documentation & Patient Communication Engine** — a production-oriented implementation of the
+**Clinical Documentation and Patient Communication Engine** — a production-oriented implementation of the
 blueprint (v1.0, 21 Sep 2026). AI drafts clinical notes, intake summaries, message triage and patient replies;
 **a licensed human approves everything before it reaches the record or the patient.**
 

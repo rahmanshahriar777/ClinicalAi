@@ -2,7 +2,7 @@
   "name": "@app/api-client",
   "version": "1.0.0",
   "private": true,
-  "description": "Typed HTTP client for the Clinical AI Platform API (web + mobile)",
+  "description": "Typed HTTP client for the ClinicBridge API (web + mobile)",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {

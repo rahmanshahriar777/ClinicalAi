@@ -38,7 +38,7 @@ const envSchema = z
     JWT_SECRET: z.string().min(32).default('change-me-to-a-64-char-random-string-before-running-anything-real'),
     JWT_ACCESS_TTL: z.string().regex(/^\d+[smhd]$/).default('15m'),
     JWT_REFRESH_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
-    MFA_ISSUER_NAME: z.string().default('Clinical AI Platform'),
+    MFA_ISSUER_NAME: z.string().default('ClinicBridge'),
     FIELD_ENCRYPTION_KEY: z.string().optional(),
 
     AI_PROVIDER: z.enum(['mock', 'azure-openai', 'bedrock', 'openai-compatible']).default('mock'),

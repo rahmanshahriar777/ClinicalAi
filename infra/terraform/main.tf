@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Clinical AI Platform — AWS reference deployment (blueprint §16.1, §20)
+# ClinicBridge — AWS reference deployment (blueprint §16.1, §20)
 # Private VPC, RDS PostgreSQL (pgvector), ElastiCache Redis, S3 (KMS), ECS Fargate
 # for api + web behind an ALB, Secrets Manager for all secrets.
 # Bedrock/Azure OpenAI access is via VPC endpoints / private networking where available.
@@ -12,7 +12,7 @@ terraform {
 
 provider "aws" {
   region = var.region
-  default_tags { tags = { Project = "clinical-ai-platform", Environment = var.environment, DataClassification = "PHI" } }
+  default_tags { tags = { Project = "clinicbridge", Environment = var.environment, DataClassification = "PHI" } }
 }
 
 module "network" {

@@ -1,5 +1,4 @@
-// ---------------------------------------------------------------------------
-// Clinical AI Platform — Prisma schema
+// ClinicBridge — Prisma schema
 // Extends the blueprint §10 draft. Key additions (see docs/blueprint-gap-analysis.md):
 //   * organizationId on Patient/Clinician/Appointment/Thread for tenant scoping
 //   * clinicianId on Appointment; CareTeamAssignment for authorised access scope

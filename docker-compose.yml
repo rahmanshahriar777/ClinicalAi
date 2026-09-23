@@ -1,4 +1,4 @@
-# Local infrastructure for the Clinical AI Platform.
+# Local infrastructure for ClinicBridge.
 # Usage: docker compose up -d
 # Qdrant is optional (blueprint §7.1: pgvector for MVP, Qdrant for scale):
 #   docker compose --profile vector up -d

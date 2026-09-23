@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Clinical AI",
-    "slug": "clinical-ai-patient",
-    "scheme": "clinicalai",
+    "name": "ClinicBridge",
+    "slug": "clinicbridge-patient",
+    "scheme": "clinicbridge",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",

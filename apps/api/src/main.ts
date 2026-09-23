@@ -33,8 +33,8 @@ async function bootstrap(): Promise<void> {
 
   if (env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('Clinical AI Platform API')
-      .setDescription('AI-Powered Clinical Documentation & Patient Communication Engine — REST API. All AI outputs are drafts pending human review.')
+      .setTitle('ClinicBridge API')
+      .setDescription('Clinical Documentation and Patient Communication Engine — REST API. All AI outputs are drafts pending human review.')
       .setVersion('1.0')
       .addBearerAuth()
       .build();
