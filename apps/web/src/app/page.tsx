@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { homeFor, useAuth } from '@/lib/auth';
+import { ClinicBridgeLogo } from '@/components/clinicbridge-logo';
 
 interface RoleDemo {
   role: string;
@@ -139,20 +140,8 @@ export default function LandingPage() {
 
       {/* Main Navigation */}
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-md shadow-blue-500/20 text-white transition group-hover:scale-105">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
-            </div>
-            <div>
-              <span className="text-xl font-bold tracking-tight text-slate-900">ClinicBridge</span>
-              <span className="hidden sm:inline-block ml-2 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-blue-700 uppercase">
-                Clinical AI Engine
-              </span>
-            </div>
-          </Link>
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
+          <ClinicBridgeLogo variant="full" size="md" href="/" priority />
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
             <a href="#workflow" className="transition hover:text-blue-600">Clinical Workflow</a>
@@ -268,10 +257,8 @@ export default function LandingPage() {
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xl shadow-slate-300/40 transition hover:shadow-slate-300/60">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-red-400" />
-                    <span className="h-3 w-3 rounded-full bg-amber-400" />
-                    <span className="h-3 w-3 rounded-full bg-emerald-400" />
-                    <span className="ml-2 text-xs font-medium text-slate-600">Clinician Workspace · Encounter #ENC-2026-08</span>
+                    <ClinicBridgeLogo variant="mark" size="xs" />
+                    <span className="text-xs font-semibold text-slate-800">Clinician Workspace · Encounter #ENC-2026-08</span>
                   </div>
                   <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
                     PENDING APPROVAL
@@ -635,11 +622,11 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-6">
           <div className="flex flex-wrap items-center justify-between gap-6 border-b border-slate-800 pb-8">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-base">
-                C
+              <ClinicBridgeLogo variant="mark" size="sm" className="rounded-lg bg-white/10 p-1" />
+              <div>
+                <span className="text-lg font-bold text-white">ClinicBridge</span>
+                <span className="ml-2 text-xs text-slate-500 font-mono">v1.0</span>
               </div>
-              <span className="text-lg font-bold text-white">ClinicBridge</span>
-              <span className="text-xs text-slate-500 font-mono">v1.0</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-6 text-xs text-slate-400">

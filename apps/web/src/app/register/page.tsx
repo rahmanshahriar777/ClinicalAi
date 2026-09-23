@@ -7,6 +7,7 @@ import { type FormEvent, useState } from 'react';
 
 import { api, tokenStore } from '@/lib/api';
 import { errorMessage } from '@/lib/use-api';
+import { ClinicBridgeLogo } from '@/components/clinicbridge-logo';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -31,7 +32,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-md">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-md py-xl">
+      <div className="mb-lg flex flex-col items-center text-center">
+        <ClinicBridgeLogo variant="full" size="lg" href="/" priority className="mb-2" />
+        <p className="mt-1 text-sm font-medium text-ink-muted">New Patient Account Registration</p>
+      </div>
       <Card title="Create your patient account">
         <form onSubmit={submit} className="space-y-md">
           {error ? <Alert tone="danger">{error}</Alert> : null}

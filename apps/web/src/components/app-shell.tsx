@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { useAuth } from '@/lib/auth';
+import { ClinicBridgeLogo } from '@/components/clinicbridge-logo';
 
 const NAV: Record<string, Array<{ href: string; label: string }>> = {
   PATIENT: [
@@ -56,7 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:bg-surface focus:p-2">Skip to content</a>
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-md px-md py-sm">
-          <Link href={nav[0]?.href ?? '/'} className="text-lg font-semibold text-primary">ClinicBridge</Link>
+          <ClinicBridgeLogo variant="horizontal" size="sm" href={nav[0]?.href ?? '/'} />
           <nav aria-label="Primary" className="flex flex-wrap gap-1">
             {nav.map((n) => (
               <Link key={n.href} href={n.href} aria-current={pathname === n.href ? 'page' : undefined} className={clsx('rounded-md px-3 py-2 text-sm font-medium', pathname === n.href || (n.href !== nav[0]?.href && pathname.startsWith(n.href)) ? 'bg-primary-soft text-primary' : 'text-ink-muted hover:bg-background')}>

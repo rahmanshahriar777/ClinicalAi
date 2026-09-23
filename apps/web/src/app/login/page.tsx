@@ -7,6 +7,8 @@ import { type FormEvent, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { errorMessage } from '@/lib/use-api';
 
+import { ClinicBridgeLogo } from '@/components/clinicbridge-logo';
+
 export default function LoginPage() {
   const { login, verifyMfa } = useAuth();
   const [email, setEmail] = useState('');
@@ -34,10 +36,10 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-md">
-      <div className="mb-lg text-center">
-        <h1 className="text-2xl font-bold text-primary">ClinicBridge</h1>
-        <p className="mt-1 text-sm text-ink-muted">Clinical Documentation and Patient Communication Engine</p>
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-md py-xl">
+      <div className="mb-lg flex flex-col items-center text-center">
+        <ClinicBridgeLogo variant="full" size="lg" href="/" priority className="mb-2" />
+        <p className="mt-1 text-sm font-medium text-ink-muted">Clinical Documentation and Patient Communication Engine</p>
       </div>
       <Card title={mfaToken ? 'Enter your authentication code' : 'Sign in'}>
         <form onSubmit={submit} className="space-y-md">
