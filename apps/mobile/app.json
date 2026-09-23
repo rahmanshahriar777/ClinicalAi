@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Clinical AI",
+    "slug": "clinical-ai-patient",
+    "scheme": "clinicalai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": { "backgroundColor": "#0F6FDE" },
+    "ios": {
+      "bundleIdentifier": "com.example.clinicalai",
+      "supportsTablet": false,
+      "infoPlist": { "NSFaceIDUsageDescription": "Unlock the app to protect your health information." }
+    },
+    "android": { "package": "com.example.clinicalai", "adaptiveIcon": { "backgroundColor": "#0F6FDE" }, "permissions": ["USE_BIOMETRIC", "POST_NOTIFICATIONS"] },
+    "plugins": ["expo-router", "expo-secure-store", "expo-local-authentication", ["expo-notifications", { "color": "#0F6FDE" }]],
+    "experiments": { "typedRoutes": true },
+    "extra": { "apiUrl": "http://localhost:4000", "eas": { "projectId": "00000000-0000-0000-0000-000000000000" } }
+  }
+}

@@ -1,0 +1,757 @@
+// ---------------------------------------------------------------------------
+// Clinical AI Platform — Prisma schema
+// Extends the blueprint §10 draft. Key additions (see docs/blueprint-gap-analysis.md):
+//   * organizationId on Patient/Clinician/Appointment/Thread for tenant scoping
+//   * clinicianId on Appointment; CareTeamAssignment for authorised access scope
+//   * IntakeForm, Escalation, Notification, PromptTemplate, FeatureFlag,
+//     OrganizationAiConfig, Session (refresh tokens), DocumentRevision
+//   * Enums replace free-text status/decision columns
+//   * COMPLIANCE role; REVISED document state; thread-level pipeline states
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector, pgcrypto]
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  PATIENT
+  CLINICIAN
+  NURSE
+  FRONT_DESK
+  ADMIN
+  COMPLIANCE
+}
+
+enum ConsentType {
+  TREATMENT
+  DATA_PROCESSING
+  AI_PROCESSING
+  MESSAGING
+  RESEARCH
+}
+
+enum ConsentStatus {
+  PENDING
+  GRANTED
+  DECLINED
+  REVOKED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CHECKED_IN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum DocumentType {
+  SOAP_NOTE
+  PROGRESS_NOTE
+  AFTER_VISIT_SUMMARY
+  REFERRAL
+  OTHER
+}
+
+enum DocumentStatus {
+  DRAFT
+  AI_DRAFT
+  UNDER_REVIEW
+  REVISED
+  APPROVED
+  SIGNED
+  AMENDED
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum ThreadStatus {
+  OPEN
+  TRIAGING
+  ROUTED
+  AWAITING_REVIEW
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum SenderType {
+  PATIENT
+  STAFF
+  SYSTEM
+}
+
+enum UrgencyLevel {
+  LOW
+  MEDIUM
+  HIGH
+  EMERGENCY
+}
+
+enum AiWorkflow {
+  CLINICAL_NOTE
+  PATIENT_MESSAGE_DRAFT
+  INTAKE_SUMMARY
+  PATIENT_EDUCATION
+  MESSAGE_TRIAGE
+}
+
+enum AiDraftStatus {
+  QUEUED
+  GENERATING
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  FAILED
+  SUPERSEDED
+}
+
+enum ApprovalDecision {
+  APPROVED
+  APPROVED_WITH_EDITS
+  REJECTED
+}
+
+enum EscalationStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum EscalationSource {
+  INTAKE
+  MESSAGE
+  AI_OUTPUT
+  MANUAL
+}
+
+enum IntakeStatus {
+  PENDING
+  SUBMITTED
+  SUMMARIZED
+  REVIEWED
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+  EMAIL
+  SMS
+}
+
+enum NotificationType {
+  APPOINTMENT_REMINDER
+  INTAKE_REMINDER
+  MESSAGE_REPLY
+  FOLLOW_UP
+  ESCALATION_ALERT
+  DRAFT_READY
+  DOCUMENT_AVAILABLE
+  SYSTEM
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+enum AiInvocationStatus {
+  SUCCESS
+  BLOCKED
+  PROVIDER_ERROR
+  INVALID_OUTPUT
+  REFUSED
+  TIMEOUT
+}
+
+// ---------- Identity & tenancy ----------
+
+model Organization {
+  id                    String   @id @default(uuid()) @db.Uuid
+  name                  String
+  slug                  String   @unique
+  timeZone              String   @default("UTC")
+  /// Text shown to patients when an EMERGENCY red flag is detected (blueprint §4.4).
+  emergencyGuidanceText String   @default("If this is an emergency, call your local emergency number now. This service is not monitored around the clock.")
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  users           User[]
+  patients        Patient[]
+  clinicians      Clinician[]
+  appointments    Appointment[]
+  threads         MessageThread[]
+  aiConfig        OrganizationAiConfig?
+  featureFlags    FeatureFlag[]
+  promptTemplates PromptTemplate[]
+  escalations     Escalation[]
+  auditLogs       AuditLog[]
+}
+
+model User {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  email          String   @unique
+  /// External IdP subject when AUTH_MODE=oidc.
+  externalId     String?  @unique
+  /// argon2id hash when AUTH_MODE=local; null in OIDC mode.
+  passwordHash   String?
+  role           UserRole
+  firstName      String
+  lastName       String
+  phone          String?
+  isActive       Boolean  @default(true)
+  mfaEnabled     Boolean  @default(false)
+  /// Encrypted TOTP secret (AES-256-GCM with FIELD_ENCRYPTION_KEY).
+  mfaSecretEnc   String?
+  lastLoginAt    DateTime?
+  failedLogins   Int      @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  patient      Patient?
+  clinician    Clinician?
+  sessions     Session[]
+
+  sentMessages       Message[]        @relation("MessageSender")
+  assignedThreads    MessageThread[]  @relation("ThreadAssignee")
+  createdDocuments   ClinicalDocument[] @relation("DocumentCreator")
+  approvedDocuments  ClinicalDocument[] @relation("DocumentApprover")
+  documentRevisions  DocumentRevision[]
+  notifications      Notification[]
+  pushTokens         DevicePushToken[]
+  acknowledgedEscalations Escalation[] @relation("EscalationAck")
+  requestedDrafts    AiDraft[]        @relation("DraftRequester")
+  reviewedDrafts     Approval[]       @relation("DraftReviewer")
+  auditLogs          AuditLog[]
+
+  @@index([organizationId])
+  @@index([organizationId, role])
+}
+
+/// Refresh-token sessions (local auth mode). Tokens are stored hashed.
+model Session {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  refreshTokenHash String @unique
+  userAgent      String?
+  ipAddress      String?
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  /// Set when a token is rotated; if the old token is reused, the whole family is revoked.
+  replacedById   String?  @db.Uuid
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Patient {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @db.Uuid
+  organizationId String   @db.Uuid
+  /// Medical record number assigned by the organisation (optional).
+  mrn            String?
+  dateOfBirth    DateTime @db.Date
+  preferredLang  String   @default("en")
+  timeZone       String   @default("UTC")
+  notifyInApp    Boolean  @default(true)
+  notifyPush     Boolean  @default(true)
+  notifyEmail    Boolean  @default(true)
+  notifySms      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id])
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  consents       Consent[]
+  appointments   Appointment[]
+  messageThreads MessageThread[]
+  intakeForms    IntakeForm[]
+  careTeam       CareTeamAssignment[]
+  escalations    Escalation[]
+
+  @@unique([organizationId, mrn])
+  @@index([organizationId])
+}
+
+model Clinician {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @db.Uuid
+  organizationId String   @db.Uuid
+  specialty      String?
+  licenseInfo    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id])
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  appointments Appointment[]
+  encounters   Encounter[]
+  careTeam     CareTeamAssignment[]
+
+  @@index([organizationId])
+}
+
+/// Explicit "under my care" relationship used by AccessPolicy (blueprint §11.2).
+model CareTeamAssignment {
+  id          String   @id @default(uuid()) @db.Uuid
+  patientId   String   @db.Uuid
+  clinicianId String   @db.Uuid
+  role        String   @default("PRIMARY")
+  createdAt   DateTime @default(now())
+
+  patient   Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinician Clinician @relation(fields: [clinicianId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, clinicianId])
+  @@index([clinicianId])
+}
+
+model Consent {
+  id        String        @id @default(uuid()) @db.Uuid
+  patientId String        @db.Uuid
+  type      ConsentType
+  status    ConsentStatus
+  version   String
+  grantedAt DateTime?
+  revokedAt DateTime?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime      @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId, type, createdAt])
+}
+
+// ---------- Clinical workflow ----------
+
+model Appointment {
+  id              String            @id @default(uuid()) @db.Uuid
+  organizationId  String            @db.Uuid
+  patientId       String            @db.Uuid
+  clinicianId     String?           @db.Uuid
+  scheduledAt     DateTime
+  durationMinutes Int               @default(20)
+  status          AppointmentStatus @default(SCHEDULED)
+  reason          String?
+  cancelReason    String?
+  createdById     String?           @db.Uuid
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  patient      Patient      @relation(fields: [patientId], references: [id])
+  clinician    Clinician?   @relation(fields: [clinicianId], references: [id])
+  encounter    Encounter?
+  intakeForm   IntakeForm?
+
+  @@index([organizationId, scheduledAt])
+  @@index([patientId, scheduledAt])
+  @@index([clinicianId, scheduledAt])
+}
+
+model IntakeForm {
+  id            String       @id @default(uuid()) @db.Uuid
+  appointmentId String       @unique @db.Uuid
+  patientId     String       @db.Uuid
+  status        IntakeStatus @default(PENDING)
+  /// Validated answers (packages/shared intakeAnswersSchema).
+  answers       Json?
+  /// Rule-based red flags detected at submission time.
+  redFlags      String[]     @default([])
+  urgency       UrgencyLevel @default(LOW)
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  aiDrafts    AiDraft[]
+
+  @@index([patientId])
+}
+
+model Encounter {
+  id             String    @id @default(uuid()) @db.Uuid
+  appointmentId  String    @unique @db.Uuid
+  clinicianId    String?   @db.Uuid
+  startedAt      DateTime?
+  endedAt        DateTime?
+  chiefComplaint String?
+  /// Clinician shorthand notes; input to AI note drafting.
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  appointment Appointment        @relation(fields: [appointmentId], references: [id])
+  clinician   Clinician?         @relation(fields: [clinicianId], references: [id])
+  documents   ClinicalDocument[]
+  aiDrafts    AiDraft[]
+
+  @@index([clinicianId])
+}
+
+model ClinicalDocument {
+  id           String         @id @default(uuid()) @db.Uuid
+  encounterId  String         @db.Uuid
+  type         DocumentType
+  status       DocumentStatus @default(DRAFT)
+  /// Structured content (SOAP JSON or { text }).
+  content      Json
+  /// Content hash at signing time — immutability evidence.
+  contentHash  String?
+  createdById  String         @db.Uuid
+  approvedById String?        @db.Uuid
+  aiDraftId    String?        @db.Uuid
+  approvedAt   DateTime?
+  signedAt     DateTime?
+  /// Shared with the patient (after-visit summary) at this time.
+  sharedWithPatientAt DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  encounter  Encounter          @relation(fields: [encounterId], references: [id])
+  createdBy  User               @relation("DocumentCreator", fields: [createdById], references: [id])
+  approvedBy User?              @relation("DocumentApprover", fields: [approvedById], references: [id])
+  aiDraft    AiDraft?           @relation(fields: [aiDraftId], references: [id])
+  revisions  DocumentRevision[]
+
+  @@index([encounterId])
+  @@index([status])
+}
+
+/// Full-fidelity history of every edit/amendment (blueprint §11.4 "AI draft edited").
+model DocumentRevision {
+  id            String         @id @default(uuid()) @db.Uuid
+  documentId    String         @db.Uuid
+  version       Int
+  content       Json
+  status        DocumentStatus
+  changeSummary String?
+  editedById    String         @db.Uuid
+  createdAt     DateTime       @default(now())
+
+  document ClinicalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  editedBy User             @relation(fields: [editedById], references: [id])
+
+  @@unique([documentId, version])
+}
+
+// ---------- AI governance ----------
+
+model AiDraft {
+  id             String        @id @default(uuid()) @db.Uuid
+  workflow       AiWorkflow
+  status         AiDraftStatus @default(QUEUED)
+  requestedById  String        @db.Uuid
+  encounterId    String?       @db.Uuid
+  threadId       String?       @db.Uuid
+  intakeFormId   String?       @db.Uuid
+  promptName     String
+  promptVersion  Int
+  provider       String?
+  model          String?
+  /// SHA-256 of the (redacted) prompt input — reproducibility evidence.
+  inputHash      String?
+  /// Validated, schema-conformant output.
+  output         Json?
+  /// Clinician-edited output when approved with edits.
+  editedOutput   Json?
+  confidence     Float?
+  safetyFlags    String[]      @default([])
+  redactionApplied Boolean     @default(false)
+  failureReason  String?
+  invocationId   String?       @unique @db.Uuid
+  reviewedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  requestedBy User           @relation("DraftRequester", fields: [requestedById], references: [id])
+  encounter   Encounter?     @relation(fields: [encounterId], references: [id])
+  thread      MessageThread? @relation(fields: [threadId], references: [id])
+  intakeForm  IntakeForm?    @relation(fields: [intakeFormId], references: [id])
+  invocation  AiInvocation?  @relation(fields: [invocationId], references: [id])
+  approvals   Approval[]
+  documents   ClinicalDocument[]
+  messages    Message[]
+
+  @@index([encounterId])
+  @@index([threadId])
+  @@index([status, createdAt])
+}
+
+/// Human review decision on an AI draft. Reviewer is a User because nurses may
+/// review message drafts when the organisation permits it (REQUIRE_CLINICIAN_APPROVAL=false).
+model Approval {
+  id          String           @id @default(uuid()) @db.Uuid
+  aiDraftId   String           @db.Uuid
+  reviewerId  String           @db.Uuid
+  reviewerRole String
+  decision    ApprovalDecision
+  comments    String?
+  /// Normalised edit distance between AI output and edited output (0..1) — eval metric.
+  editDistance Float?
+  createdAt   DateTime         @default(now())
+
+  aiDraft  AiDraft @relation(fields: [aiDraftId], references: [id])
+  reviewer User    @relation("DraftReviewer", fields: [reviewerId], references: [id])
+
+  @@index([aiDraftId])
+  @@index([reviewerId, createdAt])
+}
+
+/// Versioned prompt registry (blueprint §15.1 "Version control"). Code-defined
+/// defaults are seeded here so every invocation references a DB version.
+model PromptTemplate {
+  id             String     @id @default(uuid()) @db.Uuid
+  organizationId String?    @db.Uuid
+  name           String
+  workflow       AiWorkflow
+  version        Int
+  systemPrompt   String
+  userTemplate   String
+  description    String?
+  isActive       Boolean    @default(false)
+  createdById    String?    @db.Uuid
+  createdAt      DateTime   @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, name, version])
+  @@index([workflow, isActive])
+}
+
+model OrganizationAiConfig {
+  id                       String   @id @default(uuid()) @db.Uuid
+  organizationId           String   @unique @db.Uuid
+  provider                 String?
+  modelPrimary             String?
+  modelLight               String?
+  externalAiAllowed        Boolean? 
+  phiRedactionEnabled      Boolean?
+  requireClinicianApproval Boolean?
+  temperature              Float?
+  maxTokens                Int?
+  workflows                Json?
+  updatedAt                DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model FeatureFlag {
+  id             String   @id @default(uuid()) @db.Uuid
+  key            String
+  organizationId String?  @db.Uuid
+  enabled        Boolean
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@unique([key, organizationId])
+}
+
+// ---------- Messaging ----------
+
+model MessageThread {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @db.Uuid
+  patientId        String       @db.Uuid
+  subject          String?
+  status           ThreadStatus @default(OPEN)
+  urgency          UrgencyLevel @default(LOW)
+  intent           String?
+  suggestedRoute   String?
+  assignedToUserId String?      @db.Uuid
+  lastMessageAt    DateTime     @default(now())
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  patient      Patient      @relation(fields: [patientId], references: [id])
+  assignedTo   User?        @relation("ThreadAssignee", fields: [assignedToUserId], references: [id])
+  messages     Message[]
+  aiDrafts     AiDraft[]
+  escalations  Escalation[]
+
+  @@index([organizationId, status, urgency])
+  @@index([patientId, lastMessageAt])
+  @@index([assignedToUserId])
+}
+
+model Message {
+  id         String        @id @default(uuid()) @db.Uuid
+  threadId   String        @db.Uuid
+  senderType SenderType
+  senderId   String?       @db.Uuid
+  body       String
+  status     MessageStatus @default(SENT)
+  aiDrafted  Boolean       @default(false)
+  aiDraftId  String?       @db.Uuid
+  redFlags   String[]      @default([])
+  readAt     DateTime?
+  createdAt  DateTime      @default(now())
+
+  thread  MessageThread @relation(fields: [threadId], references: [id])
+  sender  User?         @relation("MessageSender", fields: [senderId], references: [id])
+  aiDraft AiDraft?      @relation(fields: [aiDraftId], references: [id])
+
+  @@index([threadId, createdAt])
+}
+
+// ---------- Escalation (blueprint §4.4) ----------
+
+model Escalation {
+  id               String           @id @default(uuid()) @db.Uuid
+  organizationId   String           @db.Uuid
+  patientId        String           @db.Uuid
+  threadId         String?          @db.Uuid
+  source           EscalationSource
+  urgency          UrgencyLevel
+  redFlags         String[]         @default([])
+  summary          String
+  status           EscalationStatus @default(OPEN)
+  acknowledgedById String?          @db.Uuid
+  acknowledgedAt   DateTime?
+  resolvedAt       DateTime?
+  resolutionNotes  String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  patient        Patient        @relation(fields: [patientId], references: [id])
+  thread         MessageThread? @relation(fields: [threadId], references: [id])
+  acknowledgedBy User?          @relation("EscalationAck", fields: [acknowledgedById], references: [id])
+
+  @@index([organizationId, status, urgency])
+  @@index([patientId])
+}
+
+// ---------- Notifications ----------
+
+model Notification {
+  id        String              @id @default(uuid()) @db.Uuid
+  userId    String              @db.Uuid
+  type      NotificationType
+  channel   NotificationChannel
+  title     String
+  body      String
+  data      Json?
+  status    NotificationStatus  @default(PENDING)
+  sentAt    DateTime?
+  readAt    DateTime?
+  error     String?
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+}
+
+model DevicePushToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  token     String   @unique
+  platform  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------- Audit & observability ----------
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @db.Uuid
+  actorId        String?  @db.Uuid
+  actorRole      String?
+  action         String
+  resource       String
+  resourceId     String?
+  patientId      String?  @db.Uuid
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  requestId      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  actor        User?         @relation(fields: [actorId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@index([resource, resourceId])
+  @@index([patientId, createdAt])
+  @@index([organizationId, action, createdAt])
+}
+
+model AiInvocation {
+  id            String             @id @default(uuid()) @db.Uuid
+  workflow      AiWorkflow
+  provider      String
+  model         String
+  promptName    String
+  promptVersion Int
+  inputHash     String?
+  inputTokens   Int?
+  outputTokens  Int?
+  latencyMs     Int?
+  costEstimate  Float?
+  status        AiInvocationStatus
+  redactionApplied Boolean         @default(false)
+  redactedEntityCount Int          @default(0)
+  injectionSignals String[]        @default([])
+  errorMessage  String?
+  metadata      Json?
+  createdAt     DateTime           @default(now())
+
+  drafts AiDraft[]
+
+  @@index([workflow, createdAt])
+  @@index([status])
+}
+
+/// Embeddings for RAG over authorised content (pgvector, blueprint §7.1).
+model ContentEmbedding {
+  id             String                 @id @default(uuid()) @db.Uuid
+  organizationId String                 @db.Uuid
+  patientId      String?                @db.Uuid
+  sourceType     String
+  sourceId       String
+  chunkIndex     Int                    @default(0)
+  content        String
+  embedding      Unsupported("vector(1536)")?
+  createdAt      DateTime               @default(now())
+
+  @@index([organizationId, patientId])
+  @@index([sourceType, sourceId])
+}
