@@ -8,6 +8,8 @@ import type { ReactNode } from 'react';
 
 import { useAuth } from '@/lib/auth';
 import { ClinicBridgeLogo } from '@/components/clinicbridge-logo';
+import { VoiceFloatingTrigger, VoiceStudioModal } from '@/components/voice';
+import { useState } from 'react';
 
 const NAV: Record<string, Array<{ href: string; label: string }>> = {
   PATIENT: [
@@ -51,6 +53,7 @@ const NAV: Record<string, Array<{ href: string; label: string }>> = {
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const [voiceStudioOpen, setVoiceStudioOpen] = useState(false);
   const nav = user ? (NAV[user.role] ?? []) : [];
   return (
     <div className="min-h-screen bg-background">
@@ -65,16 +68,31 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          {user ? (
-            <div className="flex items-center gap-md text-sm">
-              <span className="text-ink-muted">{user.firstName} {user.lastName} · {user.role.toLowerCase().replace('_', ' ')}</span>
-              <Button variant="secondary" onClick={() => void logout()}>Sign out</Button>
-            </div>
-          ) : null}
+          <div className="flex items-center gap-md">
+            <button
+              type="button"
+              onClick={() => setVoiceStudioOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary-soft transition"
+              title="Launch Clinical Voice Studio"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              <span>Voice Studio</span>
+            </button>
+            {user ? (
+              <div className="flex items-center gap-md text-sm">
+                <span className="text-ink-muted">{user.firstName} {user.lastName} · {user.role.toLowerCase().replace('_', ' ')}</span>
+                <Button variant="secondary" onClick={() => void logout()}>Sign out</Button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
       <main id="main" className="mx-auto max-w-6xl px-md py-lg">{children}</main>
       <footer className="mx-auto max-w-6xl px-md pb-lg text-xs text-ink-muted">AI assists documentation and communication; every AI output is a draft reviewed by your care team. Do not use messaging for emergencies.</footer>
+      <VoiceFloatingTrigger />
+      <VoiceStudioModal isOpen={voiceStudioOpen} onClose={() => setVoiceStudioOpen(false)} />
     </div>
   );
 }

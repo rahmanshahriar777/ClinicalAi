@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { homeFor, useAuth } from '@/lib/auth';
 import { ClinicBridgeLogo } from '@/components/clinicbridge-logo';
+import { VoiceStudioModal, VoiceFloatingTrigger, MicDictationButton, AudioReaderButton, VoiceVisualizer } from '@/components/voice';
 
 interface RoleDemo {
   role: string;
@@ -107,6 +108,8 @@ export default function LandingPage() {
   const router = useRouter();
   const [activeWorkflow, setActiveWorkflow] = useState(0);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [voiceStudioOpen, setVoiceStudioOpen] = useState(false);
+  const [demoVoiceText, setDemoVoiceText] = useState('Patient presents with 3 days of mild intermittent congestion and dry cough. Vital signs stable, lungs clear.');
 
   const handleCopy = (email: string) => {
     navigator.clipboard.writeText(email);
@@ -143,7 +146,11 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
           <ClinicBridgeLogo variant="full" size="md" href="/" priority />
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
+            <a href="#voice" className="transition hover:text-blue-600 flex items-center gap-1.5 font-semibold text-sky-700 dark:text-sky-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Voice AI
+            </a>
             <a href="#workflow" className="transition hover:text-blue-600">Clinical Workflow</a>
             <a href="#safety" className="transition hover:text-blue-600">Safety & Governance</a>
             <a href="#roles" className="transition hover:text-blue-600">Role Portals</a>
@@ -157,6 +164,17 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setVoiceStudioOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-100 shadow-xs transition"
+              title="Launch Clinical Voice Studio"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              <span>Voice Studio</span>
+            </button>
             <Link
               href="/login"
               className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
@@ -473,6 +491,207 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Voice-Enabled Clinical Dictation & Speech Showcase */}
+      <section id="voice" className="border-t border-slate-200 bg-gradient-to-b from-white via-sky-50/30 to-white py-16 lg:py-24">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-sky-800 border border-sky-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Voice-Enabled Engine
+            </span>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Ambient Clinical Dictation &amp; Natural AI Voice Synthesis
+            </h2>
+            <p className="mt-3 text-base text-slate-600 leading-relaxed">
+              Capture patient encounters effortlessly with zero-latency speech-to-text dictation, and communicate medical guidance clearly using empathetic, clinical-grade voice generation.
+            </p>
+          </div>
+
+          {/* Interactive Live Voice Playground */}
+          <div className="mt-12 grid gap-8 lg:grid-cols-2 max-w-5xl mx-auto">
+            {/* STT Card */}
+            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-base">Real-Time Dictation (STT)</h3>
+                      <p className="text-xs text-slate-500">Live Speech-to-Text with medical normalization</p>
+                    </div>
+                  </div>
+                  <MicDictationButton
+                    size="md"
+                    label="Dictate Now"
+                    clinicalContext="SOAP_NOTE"
+                    onTranscript={(t) => setDemoVoiceText((prev) => (prev ? prev.trim() + ' ' : '') + t)}
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    Dictated Clinical Note
+                  </label>
+                  <div className="relative min-h-[140px] rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-slate-800 leading-relaxed">
+                    {demoVoiceText}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDemoVoiceText('Patient presents with 3 days of mild intermittent congestion and dry cough. Vital signs stable, lungs clear.')}
+                    className="text-[11px] font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded-md transition"
+                  >
+                    Sample: Respiratory Follow-Up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoVoiceText('Patient reports throbbing frontal headache rated 6 out of 10 beginning yesterday. Denies photophobia or aura.')}
+                    className="text-[11px] font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded-md transition"
+                  >
+                    Sample: Migraine Triage
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoVoiceText('')}
+                    className="text-[11px] font-medium text-slate-500 hover:text-rose-600 px-2 py-1 transition ml-auto"
+                  >
+                    Clear Text
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Continuous Real-Time Streaming
+                </span>
+                <span>Dual Engine + Fallback</span>
+              </div>
+            </div>
+
+            {/* TTS Card */}
+            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition">
+              <div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-base">Natural Speech Synthesis (TTS)</h3>
+                      <p className="text-xs text-slate-500">Empathetic clinical voice generation</p>
+                    </div>
+                  </div>
+                  <AudioReaderButton
+                    text={demoVoiceText}
+                    label="Listen Aloud"
+                    size="md"
+                    showSpeedToggle
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    Select Voice Persona
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2.5 rounded-lg border border-sky-300 bg-sky-50/60 font-medium text-slate-800">
+                      <div className="font-bold text-sky-900">Dr. Clara Vance</div>
+                      <div className="text-[11px] text-sky-700">Warm &amp; Reassuring Physician</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 font-medium text-slate-800">
+                      <div className="font-bold text-slate-900">Dr. Marcus Sterling</div>
+                      <div className="text-[11px] text-slate-500">Clear &amp; Authoritative Attending</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 font-medium text-slate-800">
+                      <div className="font-bold text-slate-900">Nurse Sarah Jenkins</div>
+                      <div className="text-[11px] text-slate-500">Empathetic Care Coordinator</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 font-medium text-slate-800">
+                      <div className="font-bold text-slate-900">James Reynolds</div>
+                      <div className="text-[11px] text-slate-500">Patient Education Specialist</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setVoiceStudioOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100 font-semibold text-xs transition"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    Open Full Clinical Voice Studio (Custom Audio, Scrubbing &amp; Downloads)
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="flex items-center gap-1.5 text-indigo-600 font-medium">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Client WebSpeech &amp; Server Audio Fallback
+                </span>
+                <span>0.5x - 2.0x Pitch &amp; Speed</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Key Voice Highlights Grid */}
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 max-w-5xl mx-auto">
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-sky-500" />
+                Zero-Latency Dictation
+              </h4>
+              <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                Interim speech streaming lets clinicians see spoken words materialize live in SOAP notes and messages without waiting for chunk uploads.
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Medical Normalization
+              </h4>
+              <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                Clinical jargon and spoken shorthand like &ldquo;pt&rdquo;, &ldquo;bp&rdquo;, &ldquo;tid&rdquo;, and &ldquo;sob&rdquo; expand automatically into clean clinical prose with proper punctuation.
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                Empathetic AI Speech
+              </h4>
+              <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                Calibrated voice personas communicate care plans, medication instructions, and discharge instructions at patient-friendly reading levels.
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-rose-500" />
+                HIPAA / PHI Safeguards
+              </h4>
+              <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                Transcripts pass through automated regex rule redaction before any external cloud model is invoked, preventing PHI leakage.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Role Portals Showcase */}
       <section id="roles" className="border-t border-slate-200 bg-white py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-6">
@@ -643,6 +862,10 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Global Voice Assistant & Studio Trigger */}
+      <VoiceFloatingTrigger />
+      <VoiceStudioModal isOpen={voiceStudioOpen} onClose={() => setVoiceStudioOpen(false)} />
     </div>
   );
 }

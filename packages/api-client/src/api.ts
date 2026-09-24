@@ -20,6 +20,11 @@ import type {
   CreateUserInput,
   UpsertPromptTemplateInput,
   AuditLogQuery,
+  TranscribeAudioInput,
+  TranscribeResponse,
+  SynthesizeSpeechInput,
+  SynthesizeResponse,
+  VoiceStatusResponse,
 } from '@app/shared';
 
 import { HttpClient, qs } from './client';
@@ -133,6 +138,12 @@ export class ClinicalApi {
     flags: () => this.http.get<{ rows: Json[]; effective: Record<string, boolean> }>('/admin/feature-flags'),
     setFlag: (key: string, enabled: boolean) => this.http.put<Json>('/admin/feature-flags', { key, enabled }),
     aiMetrics: (days = 30) => this.http.get<Json>(`/admin/ai-metrics${qs({ days })}`),
+  };
+
+  voice = {
+    status: () => this.http.get<VoiceStatusResponse>('/voice/status'),
+    transcribe: (input: TranscribeAudioInput) => this.http.post<TranscribeResponse>('/voice/transcribe', input),
+    synthesize: (input: SynthesizeSpeechInput) => this.http.post<SynthesizeResponse>('/voice/synthesize', input),
   };
 }
 

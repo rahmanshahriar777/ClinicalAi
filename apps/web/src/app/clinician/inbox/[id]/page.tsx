@@ -9,6 +9,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { errorMessage, fmtDate, useApi } from '@/lib/use-api';
+import { MicDictationButton, AudioReaderButton } from '@/components/voice';
 
 export default function StaffThread() {
   const { id } = useParams<{ id: string }>();
@@ -59,14 +60,26 @@ export default function StaffThread() {
             <ol className="space-y-md">
               {t.messages.map((m: { id: string; senderType: string; body: string; createdAt: string; aiDrafted: boolean; redFlags: string[] }) => (
                 <li key={m.id} className={clsx('max-w-[85%] rounded-lg p-md text-sm', m.senderType === 'STAFF' ? 'ml-auto bg-primary-soft' : m.senderType === 'SYSTEM' ? 'border-l-4 border-danger bg-danger-soft' : 'bg-background')}>
-                  <p className="mb-1 text-xs text-ink-muted">{m.senderType === 'PATIENT' ? 'Patient' : m.senderType === 'SYSTEM' ? 'System' : 'Care team'} · {fmtDate(m.createdAt)}{m.aiDrafted ? ' · AI-drafted, human-approved' : ''}{m.redFlags?.length ? ` · flags: ${m.redFlags.join(', ')}` : ''}</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-ink-muted">{m.senderType === 'PATIENT' ? 'Patient' : m.senderType === 'SYSTEM' ? 'System' : 'Care team'} · {fmtDate(m.createdAt)}{m.aiDrafted ? ' · AI-drafted, human-approved' : ''}{m.redFlags?.length ? ` · flags: ${m.redFlags.join(', ')}` : ''}</p>
+                    <AudioReaderButton text={m.body} size="sm" variant="ghost" label="Listen" />
+                  </div>
                   <p className="whitespace-pre-wrap">{m.body}</p>
                 </li>
               ))}
             </ol>
             {canSend && t.status !== 'CLOSED' ? (
               <form onSubmit={send} className="mt-lg space-y-sm">
-                <Textarea required value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} placeholder="Reply to the patient…" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-ink">Reply message</span>
+                  <MicDictationButton
+                    size="sm"
+                    label="Dictate reply"
+                    clinicalContext="PATIENT_COMMUNICATION"
+                    onTranscript={(text) => setBody((prev) => (prev ? prev.trim() + ' ' : '') + text)}
+                  />
+                </div>
+                <Textarea required value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} placeholder="Reply to the patient or use voice dictation…" />
                 <div className="flex flex-wrap gap-sm">
                   <Button type="submit" loading={busy === 'send'}>Send</Button>
                   {canAi ? <Button type="button" variant="secondary" loading={busy === 'draft'} onClick={() => run('draft', () => api().threads.requestDraft(id), 'AI draft requested — refresh in a few seconds')}>Draft reply with AI</Button> : null}

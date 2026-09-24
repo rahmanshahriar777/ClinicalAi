@@ -7,6 +7,7 @@ import { type FormEvent, useState } from 'react';
 
 import { api } from '@/lib/api';
 import { errorMessage, fmtDate, useApi } from '@/lib/use-api';
+import { MicDictationButton } from '@/components/voice';
 
 export default function PatientMessages() {
   const router = useRouter();
@@ -56,8 +57,19 @@ export default function PatientMessages() {
         <Card title="New message">
           <form onSubmit={create} className="space-y-md">
             {error ? <Alert tone="danger">{error}</Alert> : null}
-            <Field label="Subject"><Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} /></Field>
-            <Field label="Message"><Textarea required value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} /></Field>
+            <Field label="Subject"><Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} placeholder="Brief topic…" /></Field>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium text-ink">Message</span>
+                <MicDictationButton
+                  size="sm"
+                  label="Speak message"
+                  clinicalContext="PATIENT_COMMUNICATION"
+                  onTranscript={(text) => setBody((prev) => (prev ? prev.trim() + ' ' : '') + text)}
+                />
+              </div>
+              <Textarea required value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} placeholder="Type or speak your questions or symptoms here…" />
+            </div>
             <Button type="submit" loading={busy} className="w-full">Send</Button>
           </form>
         </Card>

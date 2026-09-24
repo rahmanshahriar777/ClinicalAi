@@ -7,3 +7,4 @@ export * from './intake';
 export * from './messaging';
 export * from './ai';
 export * from './admin';
+export * from './voice';

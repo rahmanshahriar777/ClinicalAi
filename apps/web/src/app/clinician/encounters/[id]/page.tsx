@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 
 import { api } from '@/lib/api';
 import { errorMessage, fmtDate, useApi } from '@/lib/use-api';
+import { MicDictationButton, AudioReaderButton } from '@/components/voice';
 
 type Soap = { subjective: string; objective: string; assessment: string; plan: string };
 const EMPTY: Soap = { subjective: '', objective: '', assessment: '', plan: '' };
@@ -70,8 +71,41 @@ export default function EncounterPage() {
         <div className="space-y-lg lg:col-span-2">
           <Card title="Clinician notes" action={<Button variant="secondary" loading={busy === 'save'} disabled={done} onClick={() => run('save', () => api().encounters.update(id, { notes, chiefComplaint: complaint || undefined }), 'Saved')}>Save</Button>}>
             <div className="space-y-md">
-              <Field label="Chief complaint"><Input value={complaint} onChange={(ev) => setComplaint(ev.target.value)} disabled={done} maxLength={500} /></Field>
-              <Field label="Shorthand notes" hint="Trusted input to the AI note drafter. Keep it factual; the AI never adds facts that are not here or in the intake."><Textarea value={notes} onChange={(ev) => setNotes(ev.target.value)} disabled={done} rows={8} /></Field>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-ink">Chief complaint</span>
+                  {!done && (
+                    <MicDictationButton
+                      size="sm"
+                      label="Dictate complaint"
+                      clinicalContext="CHIEF_COMPLAINT"
+                      onTranscript={(t) => setComplaint((prev) => (prev ? prev.trim() + ' ' : '') + t)}
+                    />
+                  )}
+                </div>
+                <Input value={complaint} onChange={(ev) => setComplaint(ev.target.value)} disabled={done} maxLength={500} placeholder="Patient's primary presenting concern…" />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <div>
+                    <span className="text-sm font-medium text-ink">Shorthand notes</span>
+                    <span className="block text-xs text-ink-muted">Trusted input to the AI note drafter. Speak or type factually.</span>
+                  </div>
+                  {!done && (
+                    <div className="flex items-center gap-2">
+                      {notes && <AudioReaderButton text={notes} label="Listen" size="sm" />}
+                      <MicDictationButton
+                        size="sm"
+                        label="Dictate notes"
+                        clinicalContext="SOAP_NOTE"
+                        onTranscript={(t) => setNotes((prev) => (prev ? prev.trim() + ' ' : '') + t)}
+                      />
+                    </div>
+                  )}
+                </div>
+                <Textarea value={notes} onChange={(ev) => setNotes(ev.target.value)} disabled={done} rows={8} placeholder="Dictate or type clinical exam, vital observations, history, and assessment thoughts…" />
+              </div>
             </div>
           </Card>
 
@@ -160,10 +194,38 @@ function DocumentEditor({ state, encounterId, onDone }: { state: { id: string; c
       ) : null}
       {(state.id ? isSoap : type !== 'AFTER_VISIT_SUMMARY') ? (
         (['subjective', 'objective', 'assessment', 'plan'] as const).map((k) => (
-          <Field key={k} label={k[0]!.toUpperCase() + k.slice(1)}><Textarea rows={3} value={soap[k]} onChange={(e) => setSoap({ ...soap, [k]: e.target.value })} /></Field>
+          <div key={k} className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-ink capitalize">{k}</span>
+              <div className="flex items-center gap-1.5">
+                {soap[k] && <AudioReaderButton text={soap[k]} size="sm" />}
+                <MicDictationButton
+                  size="sm"
+                  label={`Dictate ${k}`}
+                  clinicalContext="SOAP_NOTE"
+                  onTranscript={(t) => setSoap((prev) => ({ ...prev, [k]: (prev[k] ? prev[k].trim() + ' ' : '') + t }))}
+                />
+              </div>
+            </div>
+            <Textarea rows={3} value={soap[k]} onChange={(e) => setSoap({ ...soap, [k]: e.target.value })} />
+          </div>
         ))
       ) : (
-        <Field label="Plain-language summary for the patient"><Textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} /></Field>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-ink">Plain-language summary for the patient</span>
+            <div className="flex items-center gap-1.5">
+              {text && <AudioReaderButton text={text} size="sm" label="Read summary" />}
+              <MicDictationButton
+                size="sm"
+                label="Dictate summary"
+                clinicalContext="PATIENT_COMMUNICATION"
+                onTranscript={(t) => setText((prev) => (prev ? prev.trim() + ' ' : '') + t)}
+              />
+            </div>
+          </div>
+          <Textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} />
+        </div>
       )}
       <div className="flex gap-sm"><Button onClick={save}>Save</Button><Button variant="secondary" onClick={onDone}>Cancel</Button></div>
     </div>
